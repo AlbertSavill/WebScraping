@@ -11,7 +11,7 @@ all_quotes = []
 base_url = "http://quotes.toscrape.com/"
 
 # This URL will keep changing
-url = "/page/1"
+url = "page/1" # No need a '/' at the start of this url seeing the base url already ends with '/'
 
 while url:
 
@@ -47,37 +47,39 @@ print(quote["text"])
 # While loop below needs fixing, over engineered.
 
 guess = ""
+hints = [
+	lambda: f"The author was born on {birth_date} {birth_place}",
+	lambda: f"The author's first name starts with {quote['author'][0]}",
+	lambda: f"The author's last name starts with: {quote['author'].split(' ')[1][0]}"
+]
+
+# print(len(hints))
+
+# Getting the bio details once instead of repeatedly
+if remaining_guesses > 3:
+	res = requests.get(f"{base_url}{quote['bio-link']}")
+	soup = BeautifulSoup(res.text, "html.parser")
+	birth_date = soup.find(class_="author-born-date").get_text()
+	birth_place = soup.find(class_="author-born-location").get_text()
+
+# Whille loop to begin the remaining guesses and begin user input.
+# Keep the game on if the guess is not equal to the author and remaining guesses havent ran out yet.
 while guess.lower() != quote["author"].lower() and remaining_guesses > 0:
-	guess = input(
-		f"Who said this quote? Guesses remaining {remaining_guesses} ")
-	
-	if guess == quote["author"]:
-		print("CONGRATULATIONS!!! YOU GOT IT RIGHT!")
+	guess = input(f"Who said this quote? Guesses remaining: {remaining_guesses} ")
+
+	# Condition for the user to win.
+	if guess.lower() == quote["author"].lower():
+		print("Congratulations!!! You Got it right!")
 		break
+
+	# Minus a remaining guess if user hasn't guesses correctly yet
+	# If there's still remaining guesses, keep giving hints (lambda list above) but take away a guess every time a hint is given.
+	# the len of hints is 3 as there's 3 hints in the list.
+	# Once the remaining guesses are not above 0 in other words user ran out of guesses, then lose, and the programme
+	# Prints the correct author.
 	remaining_guesses -= 1
-
-	if remaining_guesses == 3:
-		res = requests.get(f"{base_url}{quote['bio-link']}")
-		soup = BeautifulSoup(res.text, "html.parser")
-		birth_date = soup.find(class_="author-born-date").get_text()
-		birth_place = soup.find(class_="author-born-location").get_text()
-		print(
-			f"Here's a hint: The author was born on {birth_date} {birth_place} "
-		)
-
-	elif remaining_guesses == 2:
-		print(
-			f"Here's a hing: the authors first name starts with: {quote['author'][0]} "
-		)
-	
-	elif remaining_guesses == 1:
-		last_intial = quote["author"].split(" ")[1][0]
-		print(
-			f"Here's a hint: the author's last name starts with: {last_intial} "
-		)
-	
+	if remaining_guesses > 0:
+		if remaining_guesses <= len(hints):
+			print(f"Here's a hint: {hints[len(hints) - remaining_guesses]()}")
 	else:
-		print(
-			f"Sorry, you ran out of guesses. the answer was {quote['author']} "
-		)
-	
+		print(f"Sorry, you ran out of guesses. The answer was: {quote['author']}")
